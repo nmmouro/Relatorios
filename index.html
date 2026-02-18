@@ -117,8 +117,8 @@ a:hover{ text-decoration:underline; }
 const SHEET_ID = "14mcVYMSc2HOSdb9N0Ykbs7KXBwLb8EwvGicF1GxnChQ";
 const TAB_NAME = "RUV";
 
-const TABLE_HEADERS = ["Ano","Mês","Relatório"];
-
+const TABLE_HEADERS = { RUV: ["Ano","Mês","Relatório"]};
+ 
 function updateClock(){
   const n = new Date();
   document.getElementById("clock").innerText =
