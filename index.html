@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel - Frota (GViz)</title>
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<style>
+:root{
+  --bg:#071029;
+  --card:#071029;
+  --muted:#f7f9fa;
+  --accent:#f7f9fa;
+}
+
+html,body{
+  height:100%;
+  margin:0;
+  background:var(--bg);
+  color:#fff;
+  font-family:Inter,Arial;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 34px;
+  background:#020617;
+  border-radius:10px;
+  border:1px solid #ffffff;
+}
+
+header img{height:70px;}
+header .title{font-size:30px;font-weight:700;color:var(--accent);}
+header .clock{font-size:26px;font-weight:700;color:var(--muted);}
+
+main{
+  padding:12px;
+  height:calc(100vh - 92px);
+}
+
+.card{
+  background:var(--card);
+  border-radius:10px;
+  padding:12px;
+  overflow:auto;
+}
+
+.card h2{
+  margin:0 0 8px;
+  color:var(--accent);
+  font-size:26px;
+  text-align:center;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  font-size:16px;
+  border-spacing:0;
+}
+
+th,td{
+  padding:12px 10px;
+  border-radius:10px;
+  font-weight:700;
+  text-align:center;
+  white-space:nowrap;
+}
+
+thead th{
+  position:sticky;
+  top:0;
+  background:#2c4078;
+  color:#ffffff;
+  z-index:2;
+  border:1px solid #ffffff;
+}
+
+a{
+  color:#00eaff;
+  text-decoration:none;
+}
+a:hover{ text-decoration:underline; }
+
+.small{
+  text-align:center;
+  font-size:12px;
+  color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <img src="logo.png" onerror="this.style.display='none'">
+  <div class="title">MOVIMENTAÇÃO DIÁRIA</div>
+  <div class="clock" id="clock"></div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>RUV - RMV</h2>
+    <div id="ruv">Carregando...</div>
+  </section>
+</main>
+
+<div class="small">Atualização automática a cada 30s • Google Sheets</div>
+
+<script>
+const SHEET_ID = "1Ch3AjQ0MDo4WuQWFDR3r8nZrHb4yQkSLOtT5_QgxT6E";
+const TAB_NAME = "RUV - RMV";
+
+const TABLE_HEADERS = ["Ano","Mês","Relatório"];
+
+function updateClock(){
+  const n = new Date();
+  document.getElementById("clock").innerText =
+    n.toLocaleDateString("pt-BR")+" — "+
+    n.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+}
+setInterval(updateClock,1000);
+updateClock();
+
+const parseGviz = t =>
+  JSON.parse(t.substring(t.indexOf("{"), t.lastIndexOf("}") + 1));
+
+const escapeHtml = s =>
+  String(s ?? "").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+
+const formatCell = c =>
+  c == null ? "" : (typeof c === "object" ? (c.f ?? c.v ?? "") : String(c));
+
+async function fetchSheet(){
+  const url =
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`+
+    `?sheet=${encodeURIComponent(TAB_NAME)}&tqx=out:json&nocache=${Date.now()}`;
+
+  const r = await fetch(url,{cache:"no-store"});
+  return parseGviz(await r.text());
+}
+
+function renderTable(g){
+  const el = document.getElementById("ruv");
+  if(!g?.table?.rows){
+    el.innerHTML="<div style='text-align:center;opacity:.7'>Sem dados</div>";
+    return;
+  }
+
+  const rows=g.table.rows;
+  let h="<table><thead><tr>";
+  TABLE_HEADERS.forEach(c=>h+=`<th>${c}</th>`);
+  h+="</tr></thead><tbody>";
+
+  rows.forEach(r=>{
+    const cells=r.c||[];
+    const ano=formatCell(cells[0]);
+    const mes=formatCell(cells[1]);
+    const link=formatCell(cells[2]);
+
+    h+=`<tr>
+      <td>${escapeHtml(ano)}</td>
+      <td>${escapeHtml(mes)}</td>
+      <td><a href="${escapeHtml(link)}" target="_blank">Abrir relatório</a></td>
+    </tr>`;
+  });
+
+  h+="</tbody></table>";
+  el.innerHTML=h;
+}
+
+async function load(){
+  try{
+    const g=await fetchSheet();
+    renderTable(g);
+  }catch(e){
+    console.error(e);
+  }
+}
+
+load();
+setInterval(load,10000);
+</script>
+
+</body>
+</html>
