@@ -176,9 +176,11 @@ function sortData(){
 }
 
 function getMonthIndex(m){
-  return ["janeiro","fevereiro","março","abril","maio","junho",
-          "julho","agosto","setembro","outubro","novembro","dezembro"]
-          .indexOf(m.toLowerCase());
+  if(!m) return -1;
+  const clean = m.toString().trim().toLowerCase();
+  const months = ["janeiro","fevereiro","março","abril","maio","junho",
+                  "julho","agosto","setembro","outubro","novembro","dezembro"];
+  return months.indexOf(clean);
 }
 
 function renderFilter(){
@@ -215,9 +217,12 @@ function openReport(link){
 
 async function load(){
   const g=await fetchSheet();
-  const rows=g.table.rows||[];
+  const rows = (g.table.rows || []).filter(r=>{
+  const c = r.c || [];
+  return c[0] && !isNaN(c[0].v); // só linhas onde "Ano" é número
+});
 
-  allData=rows.map(r=>{
+allData = rows.map(r=>{
     const c=r.c||[];
     return {
       ano:formatCell(c[0]),
