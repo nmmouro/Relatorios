@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Painel - Frota(GViz)</title>
+<title>Painel - Frota (GViz)</title>
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
@@ -115,12 +115,10 @@ a:hover{ text-decoration:underline; }
 
 <script>
 const SHEET_ID = "14mcVYMSc2HOSdb9N0Ykbs7KXBwLb8EwvGicF1GxnChQ";
-const TAB_NAME = ["RUV"];
+const TAB_NAME = "RUV";
 
-  const TABLE_HEADERS = {
-  ruv: ["Ano","Mês","Relatório"]
-};
- 
+const TABLE_HEADERS = ["Ano","Mês","Relatório"];
+
 function updateClock(){
   const n = new Date();
   document.getElementById("clock").innerText =
