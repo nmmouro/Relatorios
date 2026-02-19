@@ -42,6 +42,9 @@ header .clock{font-size:26px;font-weight:700;color:var(--muted);}
 main{
   padding:12px;
   height:calc(100vh - 92px);
+  display:grid;
+  grid-template-columns: 1fr 2fr;
+  gap:10px;
 }
 
 .card{
@@ -58,35 +61,46 @@ main{
   text-align:center;
 }
 
-table{
-  width:100%;
-  border-collapse:separate;
-  font-size:16px;
-  border-spacing:0;
-}
-
-th,td{
-  padding:12px 10px;
-  border-radius:10px;
-  font-weight:700;
+.filter{
   text-align:center;
-  white-space:nowrap;
+  margin-bottom:10px;
+}
+select{
+  padding:6px 12px;
+  font-size:16px;
+  border-radius:6px;
 }
 
-thead th{
-  position:sticky;
-  top:0;
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:10px;
+}
+
+.month-card{
   background:#2c4078;
-  color:#ffffff;
-  z-index:2;
-  border:1px solid #ffffff;
+  border-radius:10px;
+  padding:12px;
+  text-align:center;
+  cursor:pointer;
+  border:1px solid white;
+  transition:.2s;
+}
+.month-card:hover{
+  background:#3f5fc4;
 }
 
-a{
-  color:#00eaff;
-  text-decoration:none;
+.month-card .month{font-size:18px;font-weight:700;}
+.month-card .year{font-size:14px;opacity:.8;}
+.month-card .icon{font-size:28px;margin-top:6px;}
+
+iframe{
+  width:100%;
+  height:100%;
+  border:none;
+  border-radius:10px;
+  background:white;
 }
-a:hover{ text-decoration:underline; }
 
 .small{
   text-align:center;
@@ -100,24 +114,33 @@ a:hover{ text-decoration:underline; }
 
 <header>
   <img src="logo.png" onerror="this.style.display='none'">
-  <div class="title">RELATÓRIOS DE UTILIZAÇÃO DE VEÍCULOS</div>
+  <div class="title">MOVIMENTAÇÃO DIÁRIA</div>
   <div class="clock" id="clock"></div>
 </header>
 
 <main>
   <section class="card">
     <h2>RUV</h2>
-    <div id="ruv">Carregando...</div>
+
+    <div class="filter">
+      Ano:
+      <select id="yearFilter"></select>
+    </div>
+
+    <div id="cards" class="cards"></div>
+  </section>
+
+  <section class="card">
+    <h2>Relatório</h2>
+    <iframe id="viewer"></iframe>
   </section>
 </main>
 
-<div class="small">Atualização automática a cada 30s • Google Sheets</div>
+<div class="small">Atualização automática • Google Sheets</div>
 
 <script>
 const SHEET_ID = "14mcVYMSc2HOSdb9N0Ykbs7KXBwLb8EwvGicF1GxnChQ";
 const TAB_NAME = "RUV";
-
-const TABLE_HEADERS = ["Ano","Mês","Relatório"];
 
 function updateClock(){
   const n = new Date();
@@ -131,9 +154,6 @@ updateClock();
 const parseGviz = t =>
   JSON.parse(t.substring(t.indexOf("{"), t.lastIndexOf("}") + 1));
 
-const escapeHtml = s =>
-  String(s ?? "").replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
-
 const formatCell = c =>
   c == null ? "" : (typeof c === "object" ? (c.f ?? c.v ?? "") : String(c));
 
@@ -146,46 +166,74 @@ async function fetchSheet(){
   return parseGviz(await r.text());
 }
 
-function renderTable(g){
-  const el = document.getElementById("ruv");
-  if(!g?.table?.rows){
-    el.innerHTML="<div style='text-align:center;opacity:.7'>Sem dados</div>";
-    return;
-  }
+let allData=[];
 
-  const rows=g.table.rows;
-  let h="<table><thead><tr>";
-  TABLE_HEADERS.forEach(c=>h+=`<th>${c}</th>`);
-  h+="</tr></thead><tbody>";
-
-  rows.forEach(r=>{
-    const cells=r.c||[];
-    const ano=formatCell(cells[0]);
-    const mes=formatCell(cells[1]);
-    const link=formatCell(cells[2]);
-
-    h+=`<tr>
-      <td>${escapeHtml(ano)}</td>
-      <td>${escapeHtml(mes)}</td>
-      <td><a href="${escapeHtml(link)}" target="_blank">Abrir relatório</a></td>
-    </tr>`;
+function sortData(){
+  allData.sort((a,b)=>{
+    if(a.ano!=b.ano) return b.ano - a.ano;
+    return a.mesIndex - b.mesIndex;
   });
+}
 
-  h+="</tbody></table>";
-  el.innerHTML=h;
+function getMonthIndex(m){
+  return ["janeiro","fevereiro","março","abril","maio","junho",
+          "julho","agosto","setembro","outubro","novembro","dezembro"]
+          .indexOf(m.toLowerCase());
+}
+
+function renderFilter(){
+  const years=[...new Set(allData.map(d=>d.ano))];
+  const sel=document.getElementById("yearFilter");
+  sel.innerHTML=`<option value="all">Todos</option>`;
+  years.forEach(y=>{
+    sel.innerHTML+=`<option value="${y}">${y}</option>`;
+  });
+  sel.onchange=renderCards;
+}
+
+function renderCards(){
+  const year=document.getElementById("yearFilter").value;
+  const box=document.getElementById("cards");
+  box.innerHTML="";
+
+  allData
+    .filter(d=>year=="all"||d.ano==year)
+    .forEach(d=>{
+      box.innerHTML+=`
+        <div class="month-card" onclick="openReport('${d.link}')">
+          <div class="month">${d.mes}</div>
+          <div class="year">${d.ano}</div>
+          <div class="icon">🔗</div>
+        </div>
+      `;
+    });
+}
+
+function openReport(link){
+  document.getElementById("viewer").src=link;
 }
 
 async function load(){
-  try{
-    const g=await fetchSheet();
-    renderTable(g);
-  }catch(e){
-    console.error(e);
-  }
+  const g=await fetchSheet();
+  const rows=g.table.rows||[];
+
+  allData=rows.map(r=>{
+    const c=r.c||[];
+    return {
+      ano:formatCell(c[0]),
+      mes:formatCell(c[1]),
+      mesIndex:getMonthIndex(formatCell(c[1])),
+      link:formatCell(c[2])
+    };
+  });
+
+  sortData();
+  renderFilter();
+  renderCards();
 }
 
 load();
-setInterval(load,10000);
+setInterval(load,30000);
 </script>
 
 </body>
