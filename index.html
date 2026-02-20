@@ -168,19 +168,19 @@ async function fetchSheet(){
 
 let allData=[];
 
-function sortData(){
-  allData.sort((a,b)=>{
-    if(a.ano!=b.ano) return b.ano - a.ano;
-    return a.mesIndex - b.mesIndex;
-  });
-}
-
 function getMonthIndex(m){
   if(!m) return -1;
   const clean = m.toString().trim().toLowerCase();
   const months = ["janeiro","fevereiro","março","abril","maio","junho",
                   "julho","agosto","setembro","outubro","novembro","dezembro"];
   return months.indexOf(clean);
+}
+
+function sortData(){
+  allData.sort((a,b)=>{
+    if(a.ano!=b.ano) return b.ano - a.ano;
+    return a.mesIndex - b.mesIndex;
+  });
 }
 
 function renderFilter(){
@@ -218,11 +218,11 @@ function openReport(link){
 async function load(){
   const g=await fetchSheet();
   const rows = (g.table.rows || []).filter(r=>{
-  const c = r.c || [];
-  return c[0] && !isNaN(c[0].v); // só linhas onde "Ano" é número
-});
+    const c = r.c || [];
+    return c[0] && !isNaN(c[0].v); // remove cabeçalho
+  });
 
-allData = rows.map(r=>{
+  allData=rows.map(r=>{
     const c=r.c||[];
     return {
       ano:formatCell(c[0]),
