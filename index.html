@@ -183,14 +183,24 @@ function sortData(){
   });
 }
 
+let selectedYear = "all";
+
 function renderFilter(){
   const years=[...new Set(allData.map(d=>d.ano))];
   const sel=document.getElementById("yearFilter");
-  sel.innerHTML=`<option value="all">Todos</option>`;
+
+  selectedYear = sel.value || "all";
+
+  sel.innerHTML = `<option value="all">Todos</option>`;
   years.forEach(y=>{
-    sel.innerHTML+=`<option value="${y}">${y}</option>`;
+    sel.innerHTML += `<option value="${y}">${y}</option>`;
   });
-  sel.onchange=renderCards;
+
+  sel.value = selectedYear; // mantém seleção
+  sel.onchange = () => {
+    selectedYear = sel.value;
+    renderCards();
+  };
 }
 
 function renderCards(){
@@ -238,7 +248,11 @@ async function load(){
 }
 
 load();
-setInterval(load,30000);
+setInterval(()=>{
+  if(document.activeElement.id !== "yearFilter"){
+    load();
+  }
+},30000);
 </script>
 
 </body>
